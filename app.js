@@ -14,3 +14,9 @@ for (let i = 1; i <= 5; i++) {
         if (error) throw new Error(error.message)
     })
 }
+
+
+fs.readdir(path.join(__dirname, 'main' ),(error, data) => {
+    if (error) throw new Error(error.message)
+    console.log(data);
+})
