@@ -55,7 +55,7 @@
 // -- EXPRESS --
 
 const express = require('express');
-const user_service = require('./Users/user_service');
+const user_service = require('./users/user_service');
 const app = express();
 
 app.use(express.json());
