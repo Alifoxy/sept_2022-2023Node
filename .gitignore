@@ -1,5 +1,5 @@
 # Default ignored files
-.//node_modules
+/node_modules
 /.idea
 /sept_2022Node.iml
 /shelf/
