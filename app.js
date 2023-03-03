@@ -1,26 +1,3 @@
-// const fs =require('fs');
-// const path =require('path');
-//
-//
-// fs.mkdir(path.join(__dirname, 'main' ),(error) => {
-//     if (error) throw new Error(error.message)
-// })
-//
-// for (let i = 1; i <= 5; i++) {
-//     fs.mkdir(path.join(__dirname,'main',`dir ${i}` ),(error) => {
-//         if (error) throw new Error(error.message)
-//     })
-//     fs.appendFile(path.join(__dirname,'main',`file ${i}.txt` ),`text ${i}`,(error) => {
-//         if (error) throw new Error(error.message)
-//     })
-// }
-//
-//
-// fs.readdir(path.join(__dirname, 'main' ),(error, data) => {
-//     if (error) throw new Error(error.message)
-//     console.log(data);
-// })
-
 // -- EVENT --
 // const event = require('node:events');
 //
@@ -78,59 +55,94 @@
 // -- EXPRESS --
 
 const express = require('express');
-
+const user_service = require('./Users/user_service');
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
 
 
-app.get('/users', (req, res)=>{
+app.get('/users', async(req, res)=>{
+    const users = await user_service.reader();
     res.json(users);
 });
 
-app.get('/users/:userId', (req, res)=>{
+app.get('/users/:userId', async (req, res) => {
     const { userId } = req.params;
-    const user = users[+userId];
+
+    const users = await user_service.reader();
+    const user = users.find((user) => user.id === +userId);
+
+    if (!user) {
+        res.status(422).json(`User with id: ${userId} not found`);
+    }
 
     res.json(user);
 });
 
-app.post('/users', (req, res)=>{
-    const body = req.body;
-    users.push(body);
 
-    res.status(201).json({
-        message: 'User created!'
-    })
-})
+app.post('/users', async (req, res) => {
+    const { name, age, gender } = req.body;
+
+    if (!name || name.length < 2) {
+        res.status(400).json('Wrong name');
+    }
+    if (!age || !Number.isInteger(age) || Number.isNaN(age)) {
+        res.status(400).json('Wrong age');
+    }
+    if (!gender || (gender !== 'male' && gender !== 'female')) {
+        res.status(400).json('Wrong gender');
+    }
+
+    const users = await user_service.reader();
+    const newUser = { id: users[users.length - 1]?.id + 1 || 1, name, age, gender };
+
+    users.push(newUser);
+    await user_service.writer(users);
+    res.status(201).json(newUser);
+});
 
 
-app.put('/users/:userId', (req, res)=>{
+app.put('/users/:userId', async (req, res) => {
     const { userId } = req.params;
-    const {updatedUser} = req.body;
+    const { name, age, gender } = req.body;
 
-    users[+userId] = updatedUser;
+    if (name && name.length < 2) {
+        res.status(400).json('Wrong name');
+    }
+    if (age && !Number.isInteger(age) || Number.isNaN(age)) {
+        res.status(400).json('Wrong age');
+    }
+    if (gender && (gender !== 'male' && gender !== 'female')) {
+        res.status(400).json('Wrong gender');
+    }
 
-    res.status(200).json({
-        message: 'User updated',
-        data: users[+userId]
-    })
-})
+    const users = await user_service.reader();
+    const index = users.findIndex((user) => user.id === +userId);
 
-app.delete('/users/:userId', (req, res)=>{
+    if (index === -1) {
+        res.status(422).json(`User with id: ${userId} not found`);
+    }
+    users[index] = { ...users[index], ...req.body };
+
+    await user_service.writer(users);
+    res.status(201).json(users[index]);
+});
+
+app.delete('/users/:userId', async (req, res) => {
     const { userId } = req.params;
-        if (!userId) {
-            console.error('User was not found!');
-        }else {
-            users.splice(+userId, 1);
 
-            res.status(200).json({
-                message: 'User deleted',
-            })
-        }
+    const users = await user_service.reader();
+    const index = users.findIndex((user) => user.id === +userId);
+    if (index === -1) {
+        res.status(422).json(`User with id: ${userId} not found`);
+    }
 
-})
+    users.splice(index, 1);
+    await user_service.writer(users);
+
+    res.sendStatus(204);
+});
 
 app.get('/welcome', (req, res)=>{
     res.send('WELCOME');
